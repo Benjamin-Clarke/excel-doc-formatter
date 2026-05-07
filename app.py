@@ -4,6 +4,8 @@ import pandas as pd
 st.title("Access Event Dashboard")
 
 uploaded_file = st.file_uploader("Choose an Excel or CSV file", type=["xlsx", "csv"], key="uploaded_file")
+search_query = st.sidebar.text_input("Search")
+st.write(f"Current search text: {search_query}")
 
 if uploaded_file is None:
     st.write("Please upload an Excel or CSV file to continue")
@@ -14,9 +16,22 @@ else:
             df = pd.read_excel(uploaded_file)
             df.columns = df.columns.str.lower().str.strip()
             st.session_state['dataframe'] = df
+
+            search_cols = [col for col in ['device', 'panel', 'details'] if col in df.columns]
+            if search_query and search_cols:
+                search_mask = pd.Series(False, index=df.index)
+                for col in search_cols:
+                    search_mask = search_mask | df[col].astype(str).str.contains(search_query, case=False, na=False)
+                display_df = df[search_mask].copy()
+            else:
+                display_df = df.copy()
+                if search_query and not search_cols:
+                    st.warning("No searchable columns found (device, panel, details). Search is not applied.")
+
             st.write("Cleaned column names:", list(df.columns))
             st.write(f"File uploaded successfully. Number of rows loaded: {len(df)}")
-            st.subheader("Dashboard")
+            st.divider()
+            st.subheader("📊 Dashboard")
             col1, col2, col3 = st.columns(3)
             with col1:
                 st.metric("Total Events", len(df))
@@ -31,7 +46,8 @@ else:
                 else:
                     st.warning("Panel column not found")
 
-            st.subheader("Line Fault Events")
+            st.divider()
+            st.subheader("📊 Line Fault Events Analysis")
             keywords = ["line error", "open line", "grounded loop", "tamper"]
             pattern = "|".join(keywords)
             mask = pd.Series(False, index=df.index)
@@ -40,7 +56,7 @@ else:
             if 'details' in df.columns:
                 mask = mask | df['details'].astype(str).str.contains(pattern, case=False, na=False)
             line_faults = df[mask].copy()
-            st.write(f"Total line fault events: {len(line_faults)}")
+            st.write(f"**Total line fault events: {len(line_faults)}**")
             if 'device' in line_faults.columns:
                 device_summary = (
                     line_faults.groupby('device')
@@ -49,27 +65,35 @@ else:
                     .sort_values('line_fault_count', ascending=False)
                     .head(20)
                 )
-                st.subheader("Top 20 Devices with Line Fault Events")
-                st.dataframe(device_summary)
+                st.markdown("##### Top 20 Devices with Line Fault Events")
+                st.dataframe(device_summary, use_container_width=True)
             else:
                 st.warning("Device column not found for line fault summary")
-            st.dataframe(line_faults)
+            st.markdown("##### All Line Fault Events")
+            st.dataframe(line_faults, use_container_width=True)
 
+            st.divider()
+            st.subheader("🔍 Search & Event Filtering")
+            if search_query:
+                st.info(f"**Search Query:** `{search_query}` | **Results:** {len(display_df)} rows")
+            else:
+                st.write(f"Showing all {len(display_df)} rows")
             if 'event' in df.columns:
-                event_options = df['event'].dropna().unique().tolist()
+                event_options = display_df['event'].dropna().unique().tolist()
                 selected_events = st.sidebar.multiselect(
                     "Filter by event type",
                     options=event_options,
                     default=event_options,
                 )
                 if selected_events:
-                    filtered_df = df[df['event'].isin(selected_events)]
+                    filtered_df = display_df[display_df['event'].isin(selected_events)]
                 else:
-                    filtered_df = df.copy()
-                st.write(f"Filtered rows: {len(filtered_df)}")
-                st.dataframe(filtered_df)
+                    filtered_df = display_df.copy()
+                st.markdown(f"##### Filtered Results: {len(filtered_df)} rows")
+                st.dataframe(filtered_df, use_container_width=True)
             else:
-                st.dataframe(df.head(5))
+                st.markdown(f"##### Data Preview: {len(display_df)} rows")
+                st.dataframe(display_df.head(5), use_container_width=True)
 
             if st.button("Reset / Upload New File"):
                 st.session_state.pop('dataframe', None)
@@ -82,9 +106,22 @@ else:
             df = pd.read_csv(uploaded_file)
             df.columns = df.columns.str.lower().str.strip()
             st.session_state['dataframe'] = df
+
+            search_cols = [col for col in ['device', 'panel', 'details'] if col in df.columns]
+            if search_query and search_cols:
+                search_mask = pd.Series(False, index=df.index)
+                for col in search_cols:
+                    search_mask = search_mask | df[col].astype(str).str.contains(search_query, case=False, na=False)
+                display_df = df[search_mask].copy()
+            else:
+                display_df = df.copy()
+                if search_query and not search_cols:
+                    st.warning("No searchable columns found (device, panel, details). Search is not applied.")
+
             st.write("Cleaned column names:", list(df.columns))
             st.write(f"File uploaded successfully. Number of rows loaded: {len(df)}")
-            st.subheader("Dashboard")
+            st.divider()
+            st.subheader("📊 Dashboard")
             col1, col2, col3 = st.columns(3)
             with col1:
                 st.metric("Total Events", len(df))
@@ -99,7 +136,8 @@ else:
                 else:
                     st.warning("Panel column not found")
 
-            st.subheader("Line Fault Events")
+            st.divider()
+            st.subheader("📊 Line Fault Events Analysis")
             keywords = ["line error", "open line", "grounded loop", "tamper"]
             pattern = "|".join(keywords)
             mask = pd.Series(False, index=df.index)
@@ -108,7 +146,7 @@ else:
             if 'details' in df.columns:
                 mask = mask | df['details'].astype(str).str.contains(pattern, case=False, na=False)
             line_faults = df[mask].copy()
-            st.write(f"Total line fault events: {len(line_faults)}")
+            st.write(f"**Total line fault events: {len(line_faults)}**")
             if 'device' in line_faults.columns:
                 device_summary = (
                     line_faults.groupby('device')
@@ -117,27 +155,35 @@ else:
                     .sort_values('line_fault_count', ascending=False)
                     .head(20)
                 )
-                st.subheader("Top 20 Devices with Line Fault Events")
-                st.dataframe(device_summary)
+                st.markdown("##### Top 20 Devices with Line Fault Events")
+                st.dataframe(device_summary, use_container_width=True)
             else:
                 st.warning("Device column not found for line fault summary")
-            st.dataframe(line_faults)
+            st.markdown("##### All Line Fault Events")
+            st.dataframe(line_faults, use_container_width=True)
 
+            st.divider()
+            st.subheader("🔍 Search & Event Filtering")
+            if search_query:
+                st.info(f"**Search Query:** `{search_query}` | **Results:** {len(display_df)} rows")
+            else:
+                st.write(f"Showing all {len(display_df)} rows")
             if 'event' in df.columns:
-                event_options = df['event'].dropna().unique().tolist()
+                event_options = display_df['event'].dropna().unique().tolist()
                 selected_events = st.sidebar.multiselect(
                     "Filter by event type",
                     options=event_options,
                     default=event_options,
                 )
                 if selected_events:
-                    filtered_df = df[df['event'].isin(selected_events)]
+                    filtered_df = display_df[display_df['event'].isin(selected_events)]
                 else:
-                    filtered_df = df.copy()
-                st.write(f"Filtered rows: {len(filtered_df)}")
-                st.dataframe(filtered_df)
+                    filtered_df = display_df.copy()
+                st.markdown(f"##### Filtered Results: {len(filtered_df)} rows")
+                st.dataframe(filtered_df, use_container_width=True)
             else:
-                st.dataframe(df.head(5))
+                st.markdown(f"##### Data Preview: {len(display_df)} rows")
+                st.dataframe(display_df.head(5), use_container_width=True)
 
             if st.button("Reset / Upload New File"):
                 st.session_state.pop('dataframe', None)
