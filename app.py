@@ -28,7 +28,6 @@ else:
                 if search_query and not search_cols:
                     st.warning("No searchable columns found (device, panel, details). Search is not applied.")
 
-            st.write("Cleaned column names:", list(df.columns))
             st.write(f"File uploaded successfully. Number of rows loaded: {len(df)}")
             st.divider()
             st.subheader("📊 Dashboard")
@@ -58,19 +57,38 @@ else:
             line_faults = df[mask].copy()
             st.write(f"**Total line fault events: {len(line_faults)}**")
             if 'device' in line_faults.columns:
+                latest_time_col = None
+                if 'event local time' in line_faults.columns:
+                    latest_time_col = 'event local time'
+                elif 'event utc time' in line_faults.columns:
+                    latest_time_col = 'event utc time'
+
+                if latest_time_col is not None:
+                    line_faults['_latest_line_time'] = pd.to_datetime(
+                        line_faults[latest_time_col], errors='coerce'
+                    )
+                else:
+                    line_faults['_latest_line_time'] = pd.NaT
+
                 device_summary = (
                     line_faults.groupby('device')
-                    .size()
-                    .reset_index(name='line_fault_count')
+                    .agg(
+                        line_fault_count=('device', 'size'),
+                        latest_line_fault_time=('_latest_line_time', 'max')
+                    )
+                    .reset_index()
                     .sort_values('line_fault_count', ascending=False)
-                    .head(20)
                 )
-                st.markdown("##### Top 20 Devices with Line Fault Events")
+                st.markdown("##### All devices with line errors")
                 st.dataframe(device_summary, use_container_width=True)
             else:
                 st.warning("Device column not found for line fault summary")
+
+            display_line_faults = line_faults.copy()
+            if 'event utc time' in display_line_faults.columns:
+                display_line_faults = display_line_faults.drop(columns=['event utc time'])
             st.markdown("##### All Line Fault Events")
-            st.dataframe(line_faults, use_container_width=True)
+            st.dataframe(display_line_faults, use_container_width=True)
 
             st.divider()
             st.subheader("🔍 Search & Event Filtering")
@@ -118,7 +136,6 @@ else:
                 if search_query and not search_cols:
                     st.warning("No searchable columns found (device, panel, details). Search is not applied.")
 
-            st.write("Cleaned column names:", list(df.columns))
             st.write(f"File uploaded successfully. Number of rows loaded: {len(df)}")
             st.divider()
             st.subheader("📊 Dashboard")
@@ -148,19 +165,38 @@ else:
             line_faults = df[mask].copy()
             st.write(f"**Total line fault events: {len(line_faults)}**")
             if 'device' in line_faults.columns:
+                latest_time_col = None
+                if 'event local time' in line_faults.columns:
+                    latest_time_col = 'event local time'
+                elif 'event utc time' in line_faults.columns:
+                    latest_time_col = 'event utc time'
+
+                if latest_time_col is not None:
+                    line_faults['_latest_line_time'] = pd.to_datetime(
+                        line_faults[latest_time_col], errors='coerce'
+                    )
+                else:
+                    line_faults['_latest_line_time'] = pd.NaT
+
                 device_summary = (
                     line_faults.groupby('device')
-                    .size()
-                    .reset_index(name='line_fault_count')
+                    .agg(
+                        line_fault_count=('device', 'size'),
+                        latest_line_fault_time=('_latest_line_time', 'max')
+                    )
+                    .reset_index()
                     .sort_values('line_fault_count', ascending=False)
-                    .head(20)
                 )
-                st.markdown("##### Top 20 Devices with Line Fault Events")
+                st.markdown("##### All devices with line errors")
                 st.dataframe(device_summary, use_container_width=True)
             else:
                 st.warning("Device column not found for line fault summary")
+
+            display_line_faults = line_faults.copy()
+            if 'event utc time' in display_line_faults.columns:
+                display_line_faults = display_line_faults.drop(columns=['event utc time'])
             st.markdown("##### All Line Fault Events")
-            st.dataframe(line_faults, use_container_width=True)
+            st.dataframe(display_line_faults, use_container_width=True)
 
             st.divider()
             st.subheader("🔍 Search & Event Filtering")
