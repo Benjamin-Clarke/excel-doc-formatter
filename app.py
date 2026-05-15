@@ -1,11 +1,11 @@
 import streamlit as st
 import pandas as pd
 
+st.set_page_config(layout="wide")
+
 st.title("Access Event Dashboard")
 
 uploaded_file = st.file_uploader("Choose an Excel or CSV file", type=["xlsx", "csv"], key="uploaded_file")
-search_query = st.sidebar.text_input("Search")
-st.write(f"Current search text: {search_query}")
 
 if uploaded_file is None:
     st.write("Please upload an Excel or CSV file to continue")
@@ -16,17 +16,6 @@ else:
             df = pd.read_excel(uploaded_file)
             df.columns = df.columns.str.lower().str.strip()
             st.session_state['dataframe'] = df
-
-            search_cols = [col for col in ['device', 'panel', 'details'] if col in df.columns]
-            if search_query and search_cols:
-                search_mask = pd.Series(False, index=df.index)
-                for col in search_cols:
-                    search_mask = search_mask | df[col].astype(str).str.contains(search_query, case=False, na=False)
-                display_df = df[search_mask].copy()
-            else:
-                display_df = df.copy()
-                if search_query and not search_cols:
-                    st.warning("No searchable columns found (device, panel, details). Search is not applied.")
 
             st.write(f"File uploaded successfully. Number of rows loaded: {len(df)}")
             st.divider()
@@ -91,27 +80,45 @@ else:
             st.dataframe(display_line_faults, use_container_width=True)
 
             st.divider()
-            st.subheader("🔍 Search & Event Filtering")
-            if search_query:
-                st.info(f"**Search Query:** `{search_query}` | **Results:** {len(display_df)} rows")
-            else:
-                st.write(f"Showing all {len(display_df)} rows")
+
+            # Search and Filter Controls
+            search_query = st.text_input("Search", key="search")
             if 'event' in df.columns:
-                event_options = display_df['event'].dropna().unique().tolist()
-                selected_events = st.sidebar.multiselect(
+                event_options = df['event'].dropna().unique().tolist()
+                selected_events = st.multiselect(
                     "Filter by event type",
                     options=event_options,
-                    default=event_options,
+                    default=[],
+                    key="selected_events"
                 )
-                if selected_events:
-                    filtered_df = display_df[display_df['event'].isin(selected_events)]
-                else:
-                    filtered_df = display_df.copy()
-                st.markdown(f"##### Filtered Results: {len(filtered_df)} rows")
-                st.dataframe(filtered_df, use_container_width=True)
             else:
-                st.markdown(f"##### Data Preview: {len(display_df)} rows")
-                st.dataframe(display_df.head(5), use_container_width=True)
+                selected_events = None
+
+            # Apply search and filters
+            search_cols = [col for col in ['device', 'panel', 'details'] if col in df.columns]
+            if search_query and search_cols:
+                search_mask = pd.Series(False, index=df.index)
+                for col in search_cols:
+                    search_mask = search_mask | df[col].astype(str).str.contains(search_query, case=False, na=False)
+                display_df = df[search_mask].copy()
+            else:
+                display_df = df.copy()
+                if search_query and not search_cols:
+                    st.warning("No searchable columns found (device, panel, details). Search is not applied.")
+
+            if selected_events and len(selected_events) > 0:
+                display_df = display_df[display_df['event'].isin(selected_events)]
+
+            st.subheader("🔍 Search & Event Filtering")
+            if search_query or (selected_events and len(selected_events) > 0):
+                if search_query:
+                    st.info(f"**Search Query:** `{search_query}` | **Results:** {len(display_df)} rows")
+                else:
+                    st.write(f"Showing filtered {len(display_df)} rows")
+                st.markdown(f"##### Filtered Results: {len(display_df)} rows")
+                st.dataframe(display_df, use_container_width=True)
+            else:
+                st.write("Use the search box or select event types to view filtered results.")
 
             if st.button("Reset / Upload New File"):
                 st.session_state.pop('dataframe', None)
@@ -125,17 +132,6 @@ else:
             df.columns = df.columns.str.lower().str.strip()
             st.session_state['dataframe'] = df
 
-            search_cols = [col for col in ['device', 'panel', 'details'] if col in df.columns]
-            if search_query and search_cols:
-                search_mask = pd.Series(False, index=df.index)
-                for col in search_cols:
-                    search_mask = search_mask | df[col].astype(str).str.contains(search_query, case=False, na=False)
-                display_df = df[search_mask].copy()
-            else:
-                display_df = df.copy()
-                if search_query and not search_cols:
-                    st.warning("No searchable columns found (device, panel, details). Search is not applied.")
-
             st.write(f"File uploaded successfully. Number of rows loaded: {len(df)}")
             st.divider()
             st.subheader("📊 Dashboard")
@@ -199,27 +195,45 @@ else:
             st.dataframe(display_line_faults, use_container_width=True)
 
             st.divider()
-            st.subheader("🔍 Search & Event Filtering")
-            if search_query:
-                st.info(f"**Search Query:** `{search_query}` | **Results:** {len(display_df)} rows")
-            else:
-                st.write(f"Showing all {len(display_df)} rows")
+
+            # Search and Filter Controls
+            search_query = st.text_input("Search", key="search")
             if 'event' in df.columns:
-                event_options = display_df['event'].dropna().unique().tolist()
-                selected_events = st.sidebar.multiselect(
+                event_options = df['event'].dropna().unique().tolist()
+                selected_events = st.multiselect(
                     "Filter by event type",
                     options=event_options,
-                    default=event_options,
+                    default=[],
+                    key="selected_events"
                 )
-                if selected_events:
-                    filtered_df = display_df[display_df['event'].isin(selected_events)]
-                else:
-                    filtered_df = display_df.copy()
-                st.markdown(f"##### Filtered Results: {len(filtered_df)} rows")
-                st.dataframe(filtered_df, use_container_width=True)
             else:
-                st.markdown(f"##### Data Preview: {len(display_df)} rows")
-                st.dataframe(display_df.head(5), use_container_width=True)
+                selected_events = None
+
+            # Apply search and filters
+            search_cols = [col for col in ['device', 'panel', 'details'] if col in df.columns]
+            if search_query and search_cols:
+                search_mask = pd.Series(False, index=df.index)
+                for col in search_cols:
+                    search_mask = search_mask | df[col].astype(str).str.contains(search_query, case=False, na=False)
+                display_df = df[search_mask].copy()
+            else:
+                display_df = df.copy()
+                if search_query and not search_cols:
+                    st.warning("No searchable columns found (device, panel, details). Search is not applied.")
+
+            if selected_events and len(selected_events) > 0:
+                display_df = display_df[display_df['event'].isin(selected_events)]
+
+            st.subheader("🔍 Search & Event Filtering")
+            if search_query or (selected_events and len(selected_events) > 0):
+                if search_query:
+                    st.info(f"**Search Query:** `{search_query}` | **Results:** {len(display_df)} rows")
+                else:
+                    st.write(f"Showing filtered {len(display_df)} rows")
+                st.markdown(f"##### Filtered Results: {len(display_df)} rows")
+                st.dataframe(display_df, use_container_width=True)
+            else:
+                st.write("Use the search box or select event types to view filtered results.")
 
             if st.button("Reset / Upload New File"):
                 st.session_state.pop('dataframe', None)
